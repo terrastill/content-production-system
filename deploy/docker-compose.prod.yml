@@ -1,0 +1,14 @@
+services:
+  content-system:
+    extends:
+      file: ../compose.yaml
+      service: content-system
+    environment:
+      APP_ENV: production
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - content-data:/data
+
+volumes:
+  content-data:

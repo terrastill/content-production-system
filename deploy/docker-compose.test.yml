@@ -1,0 +1,10 @@
+services:
+  test:
+    build: ..
+    environment:
+      APP_ENV: test
+      DATABASE_PATH: /tmp/test.sqlite3
+      MEDIA_ROOT: /tmp/media
+    command: ["pytest", "-q"]
+    volumes:
+      - ../:/app

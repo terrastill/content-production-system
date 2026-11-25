@@ -1,0 +1,17 @@
+services:
+  content-system:
+    extends:
+      file: ../compose.yaml
+      service: content-system
+    environment:
+      APP_ENV: development
+      DATABASE_PATH: /data/dev.sqlite3
+      MEDIA_ROOT: /data/dev-media
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ../:/workspace
+      - dev-data:/data
+
+volumes:
+  dev-data:

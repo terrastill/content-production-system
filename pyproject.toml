@@ -1,0 +1,21 @@
+[project]
+name = "industrial-content-production"
+version = "0.1.0"
+description = "Isolated industrial content workflow: research, draft, review, CMS draft, approval, publish."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.34,<1",
+  "python-multipart>=0.0.20,<1",
+  "httpx>=0.28,<1",
+  "pydantic-settings>=2.7,<3",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0,<9", "httpx>=0.28,<1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+packages = ["app"]
