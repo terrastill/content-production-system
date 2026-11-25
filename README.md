@@ -1,48 +1,66 @@
 # Industrial Content Production System
 
-An isolated colleague-facing system for industrial content only. It deliberately contains no email agents, mailbox connectors, lead data, or email sending capability.
+A colleague-facing web console for preparing and publishing industrial articles. It contains no email agents, mailbox connectors, lead data, or outbound messaging.
 
-## Workflow
+## Web workflow
 
-`industry brief → topic proposals → AnythingLLM research → article draft → image intake → human review → CMS draft → explicit approval → publish`
+1. Enter industry, topic, article HTML, SEO fields, CMS login URL, and category ID.
+2. Create a task and optionally upload article images.
+3. Mark the package as human-reviewed.
+4. Create a CMS draft. The service sends `status=draft` explicitly.
+5. Approve the CMS draft.
+6. Click **一键发布** only after the final approval. The service publishes once and reads the CMS record back when `CMS_VERIFY_ENDPOINT` is configured.
 
-The default CMS action is always **draft**. Publishing requires a separate approval action and an authenticated CMS service account with the smallest available permissions.
+The web console is at `/`; API docs are at `/docs`; health is at `/health`. Passwords are never entered into the page or stored in the task audit log. Put CMS credentials in the server environment or secret manager.
 
-## Quick start
+## Run locally
 
 ```bash
 cp .env.example .env
-# Set only the secrets and endpoints needed in your environment.
 docker compose up --build
 ```
 
-Open `http://localhost:8080`. The API docs are at `/docs`.
+Open `http://localhost:8080`.
 
-Without external credentials, the app still runs in safe demo mode: it creates topic proposals and records `UNAVAILABLE` for external research/CMS actions. It never invents sources or claims publication.
+Without a real CMS draft endpoint, the application deliberately returns `UNAVAILABLE`; it does not pretend to create or publish an article. Without `CMS_PUBLISH_ENDPOINT`, the publish action is disabled by the server gate.
 
-## Environments
+## External adapters
 
-- Development: `docker compose -f deploy/docker-compose.dev.yml up --build`; use local SQLite and mock adapters.
-- Test: `docker compose -f deploy/docker-compose.test.yml up --build`; run `pytest` and integration checks with mock adapters.
-- Production: use `deploy/docker-compose.prod.yml` behind a reverse proxy, mount persistent data outside the image, inject secrets through the server secret manager, and use a dedicated CMS service account.
+The article-generation Skill and web service reserve `VECTOR_STORE_BASE_URL`, `VECTOR_STORE_RETRIEVAL_PATH`, `ARTICLE_MODEL_BASE_URL`, and `ARTICLE_MODEL_CHAT_PATH`. AnythingLLM is not a default dependency.
 
-## Scope boundary
+CMS variables:
 
-The application includes only industrial content production. It must not receive or store email credentials, mailboxes, lead lists, customer prospect data, or email-send permissions. `.env`, tokens, local databases, audit logs and generated images are ignored by Git.
+```text
+CMS_BASE_URL
+CMS_LOGIN_URL
+CMS_SERVICE_USERNAME
+CMS_SERVICE_PASSWORD
+CMS_API_TOKEN
+CMS_DRAFT_ENDPOINT
+CMS_PUBLISH_ENDPOINT
+CMS_MEDIA_ENDPOINT
+CMS_VERIFY_ENDPOINT
+```
 
-## Approval model
+Use a dedicated CMS service account with draft/create/read/media permissions. Give publishing permission only to the role that performs the explicit approval step.
 
-1. Create a task.
-2. Generate topics.
-3. Run research only against the configured allowlisted AnythingLLM workspace.
-4. Generate a draft and attach images.
-5. A colleague reviews and marks the task `REVIEWED`.
-6. The system creates a CMS draft (`CMS_DRAFT`).
-7. An authorized reviewer approves (`APPROVED`).
-8. Only then may the CMS publish action run (`PUBLISHED`).
+## Deployment
 
-Every transition is appended to the audit log with actor, timestamp, inputs and result. The API rejects publish requests unless the task is `APPROVED` and a CMS draft exists.
+- Development: `docker compose -f deploy/docker-compose.dev.yml up --build`
+- Test: `docker compose -f deploy/docker-compose.test.yml up --build`
+- Production: `docker compose -f deploy/docker-compose.prod.yml up --build`
 
-## Repository hygiene
+Keep the bind address private until authentication, HTTPS, and role-based access are configured. The default compose file binds only to localhost.
 
-Never commit `.env`, secrets, tokens, databases, logs, source knowledge-base exports, or generated images. Use the server's secret manager or environment variables.
+## Portable Hermes Skills
+
+The GitHub-installable Skills are under `hermes-skills/`. Install on another Hermes machine with:
+
+```bash
+python3 scripts/validate_hermes_skills.py
+python3 scripts/install_hermes_skills.py
+```
+
+## Scope and audit
+
+Every task has an audit timeline. CMS state transitions are separate: `REVIEWED → CMS_DRAFT → APPROVED → PUBLISHED`. A review does not authorize publication. `.env`, tokens, databases, logs, media, and generated content are ignored by Git.
